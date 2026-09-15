@@ -5,7 +5,7 @@ export async function POST(req: Request) {
   const body = await req.json();
   const entries = [
     { key: 'running_text', value: body.running_text || '' },
-    { key: 'theme', value: body.theme || { primary: '#b91c1c', accent: '#111827' } },
+    { key: 'theme', value: body.theme || { primary: '#2563eb', accent: '#334155', muted: '#64748b' } },
   ];
   const { data, error } = await adminSupabase().from('site_settings').upsert(entries).select();
   if (error) return Response.json({ error: error.message }, { status: 500 });

@@ -1,4 +1,3 @@
-
 -- Supabase schema untuk E-Voting OSIS SMADA 2026
 -- Jalankan file ini di Supabase SQL Editor.
 
@@ -9,13 +8,21 @@ create table if not exists public.candidates (
   pair_number int not null unique check (pair_number in (1, 2)),
   chair_name text not null,
   vice_name text not null,
+  pair_photo_url text,
   chair_photo_url text,
   vice_photo_url text,
+  vision text default '',
+  mission jsonb not null default '[]'::jsonb,
   slogan text default '',
   is_active boolean not null default true,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
+
+alter table public.candidates
+  add column if not exists pair_photo_url text,
+  add column if not exists vision text default '',
+  add column if not exists mission jsonb not null default '[]'::jsonb;
 
 create table if not exists public.voters (
   id uuid primary key default gen_random_uuid(),
@@ -49,7 +56,10 @@ create table if not exists public.site_settings (
 );
 
 create or replace function public.set_updated_at()
-returns trigger language plpgsql as $$
+returns trigger
+language plpgsql
+set search_path = public
+as $$
 begin
   new.updated_at = now();
   return new;
@@ -107,23 +117,29 @@ begin
 end;
 $$;
 
--- View hasil polling publik.
-create or replace view public.vote_results with (security_invoker = true) as
+revoke all on function public.cast_vote(text, uuid) from public, anon, authenticated;
+
+drop view if exists public.vote_results;
+create view public.vote_results with (security_invoker = true) as
 select
   c.id,
   c.pair_number,
   c.chair_name,
   c.vice_name,
+  c.pair_photo_url,
   c.chair_photo_url,
   c.vice_photo_url,
+  c.vision,
+  c.mission,
   c.slogan,
   count(v.id) filter (where v.valid = true) as votes
 from public.candidates c
 left join public.votes v on v.candidate_id = c.id
 where c.is_active = true
-group by c.id, c.pair_number, c.chair_name, c.vice_name, c.chair_photo_url, c.vice_photo_url, c.slogan;
+group by c.id, c.pair_number, c.chair_name, c.vice_name, c.pair_photo_url, c.chair_photo_url, c.vice_photo_url, c.vision, c.mission, c.slogan;
 
-create or replace view public.turnout_by_level with (security_invoker = true) as
+drop view if exists public.turnout_by_level;
+create view public.turnout_by_level with (security_invoker = true) as
 select
   level,
   count(*) as total,
@@ -143,7 +159,6 @@ alter table public.voters enable row level security;
 alter table public.votes enable row level security;
 alter table public.site_settings enable row level security;
 
--- Akses publik hanya untuk data tampilan yang aman. Voting/admin dilakukan via Route Handler server Next.js memakai service role.
 drop policy if exists "public read candidates" on public.candidates;
 create policy "public read candidates" on public.candidates for select to anon using (is_active = true);
 
@@ -156,18 +171,35 @@ grant select on public.site_settings to anon, authenticated;
 grant select on public.vote_results to anon, authenticated;
 grant select on public.turnout_by_level to anon, authenticated;
 
--- Untuk Realtime Postgres Changes.
-alter publication supabase_realtime add table public.votes;
-alter publication supabase_realtime add table public.voters;
-alter publication supabase_realtime add table public.candidates;
+-- Aktifkan Realtime bila tabel belum masuk publication. Jika muncul error duplicate, abaikan atau hapus baris terkait.
+do $$
+begin
+  begin alter publication supabase_realtime add table public.votes; exception when duplicate_object then null; end;
+  begin alter publication supabase_realtime add table public.voters; exception when duplicate_object then null; end;
+  begin alter publication supabase_realtime add table public.candidates; exception when duplicate_object then null; end;
+end $$;
 
--- Data awal kandidat. Silakan edit dari halaman admin setelah deploy.
-insert into public.candidates (pair_number, chair_name, vice_name, chair_photo_url, vice_photo_url, slogan) values
-  (1, 'Nama Ketua Paslon 1', 'Nama Wakil Paslon 1', '/candidate-placeholder-1.svg', '/candidate-placeholder-2.svg', 'Bersama Berkarya untuk SMADA'),
-  (2, 'Nama Ketua Paslon 2', 'Nama Wakil Paslon 2', '/candidate-placeholder-3.svg', '/candidate-placeholder-4.svg', 'Muda, Aktif, dan Berintegritas')
-on conflict (pair_number) do update set chair_name=excluded.chair_name, vice_name=excluded.vice_name, chair_photo_url=excluded.chair_photo_url, vice_photo_url=excluded.vice_photo_url, slogan=excluded.slogan;
+insert into public.candidates (pair_number, chair_name, vice_name, pair_photo_url, chair_photo_url, vice_photo_url, vision, mission, slogan) values
+  (1, 'DZAKY KALWA YUDHA', 'SERHAN ZEKI ADHYATNA', '/paslon-1.svg', '/paslon-1.svg', null,
+   $$Menjadikan OSIS sebagai organisasi yang aktif, berintegritas, dan berwibawa serta siap merangkul dan menampung aspirasi siswa dalam mengembangkan potensi dan prestasi melalui inovasi dan teknologi dalam dunia pendidikan.$$, 
+   '["Membangun karakter siswa SMAN 2 Sangatta Utara yang beriman dan bertaqwa terhadap tuhan yang maha esa","Membangun sistem aspirasi para siswa yang terbuka dan responsif","Menanamkan nilai kejujuran, kedisiplinan, dan tanggung jawab dalam lingkungan SMAN 2 Sangatta Utara","Memanfaatkan perkembangan teknologi sebagai sarana untuk mendukung potensi dan prestasi siswa","Menjalankan setiap program kerja dengan optimal yang telah dirancang oleh pengurus OSIS"]'::jsonb,
+   'Aktif, berintegritas, dan siap merangkul aspirasi siswa'),
+  (2, 'FAJAR NATANAEL MANULLANG', 'SAFWANA AISYAH ADALIA RISQIN', '/paslon-2.svg', '/paslon-2.svg', null,
+   $$Menjadikan OSIS sebagai organisasi yang berwibawa, berintegritas, inovatif, dan lebih dekat dengan siswa dalam menjadi wadah aspirasi serta pengembangan potensi untuk mewujudkan generasi yang kreatif, berkualitas, berprestasi, dan berdaya saing tinggi di SMAN 2 Sangatta Utara.$$, 
+   '["Membetuk murid SMAN 2 Sangatta utara untuk senantiasa menjunjung tinggi keimanan dan ketakwaan kepada Tuhan Yang Maha Esa.","Membuka ruang bagi murid SMAN 2 Sangatta Utara untuk menyampaikan aspirasi.","Membangun karakter murid SMAN 2 Sangatta utara yang kreatif, berwibawa, dan berakhlak mulia.","Memanfaatkan kemajuan teknologi dan membangun kolaborasi untuk mendukung pengembangan bakat dan minat murid.","Menjalankan seluruh program kerja OSIS secara maksimal, terarah, dan bertanggung jawab sesuai dengan rancangan yang telah disusun oleh pengurus OSIS."]'::jsonb,
+   'Berwibawa, berintegritas, inovatif, dan dekat dengan siswa')
+on conflict (pair_number) do update set
+  chair_name=excluded.chair_name,
+  vice_name=excluded.vice_name,
+  pair_photo_url=excluded.pair_photo_url,
+  chair_photo_url=excluded.chair_photo_url,
+  vice_photo_url=excluded.vice_photo_url,
+  vision=excluded.vision,
+  mission=excluded.mission,
+  slogan=excluded.slogan,
+  updated_at=now();
+
 insert into public.site_settings (key, value) values
   ('running_text', '"Selamat datang di Pemilihan Ketua dan Wakil Ketua OSIS SMADA 2026. Gunakan hak suara dengan jujur, tertib, dan bertanggung jawab."'::jsonb),
-  ('theme', '{"primary":"#b91c1c","accent":"#111827"}'::jsonb)
+  ('theme', '{"primary":"#2563eb","accent":"#334155","muted":"#64748b"}'::jsonb)
 on conflict (key) do update set value=excluded.value, updated_at=now();
-

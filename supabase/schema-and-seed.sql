@@ -1,4 +1,3 @@
-
 -- Supabase schema untuk E-Voting OSIS SMADA 2026
 -- Jalankan file ini di Supabase SQL Editor.
 
@@ -9,13 +8,21 @@ create table if not exists public.candidates (
   pair_number int not null unique check (pair_number in (1, 2)),
   chair_name text not null,
   vice_name text not null,
+  pair_photo_url text,
   chair_photo_url text,
   vice_photo_url text,
+  vision text default '',
+  mission jsonb not null default '[]'::jsonb,
   slogan text default '',
   is_active boolean not null default true,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
+
+alter table public.candidates
+  add column if not exists pair_photo_url text,
+  add column if not exists vision text default '',
+  add column if not exists mission jsonb not null default '[]'::jsonb;
 
 create table if not exists public.voters (
   id uuid primary key default gen_random_uuid(),
@@ -49,7 +56,10 @@ create table if not exists public.site_settings (
 );
 
 create or replace function public.set_updated_at()
-returns trigger language plpgsql as $$
+returns trigger
+language plpgsql
+set search_path = public
+as $$
 begin
   new.updated_at = now();
   return new;
@@ -107,23 +117,29 @@ begin
 end;
 $$;
 
--- View hasil polling publik.
-create or replace view public.vote_results with (security_invoker = true) as
+revoke all on function public.cast_vote(text, uuid) from public, anon, authenticated;
+
+drop view if exists public.vote_results;
+create view public.vote_results with (security_invoker = true) as
 select
   c.id,
   c.pair_number,
   c.chair_name,
   c.vice_name,
+  c.pair_photo_url,
   c.chair_photo_url,
   c.vice_photo_url,
+  c.vision,
+  c.mission,
   c.slogan,
   count(v.id) filter (where v.valid = true) as votes
 from public.candidates c
 left join public.votes v on v.candidate_id = c.id
 where c.is_active = true
-group by c.id, c.pair_number, c.chair_name, c.vice_name, c.chair_photo_url, c.vice_photo_url, c.slogan;
+group by c.id, c.pair_number, c.chair_name, c.vice_name, c.pair_photo_url, c.chair_photo_url, c.vice_photo_url, c.vision, c.mission, c.slogan;
 
-create or replace view public.turnout_by_level with (security_invoker = true) as
+drop view if exists public.turnout_by_level;
+create view public.turnout_by_level with (security_invoker = true) as
 select
   level,
   count(*) as total,
@@ -143,7 +159,6 @@ alter table public.voters enable row level security;
 alter table public.votes enable row level security;
 alter table public.site_settings enable row level security;
 
--- Akses publik hanya untuk data tampilan yang aman. Voting/admin dilakukan via Route Handler server Next.js memakai service role.
 drop policy if exists "public read candidates" on public.candidates;
 create policy "public read candidates" on public.candidates for select to anon using (is_active = true);
 
@@ -156,20 +171,39 @@ grant select on public.site_settings to anon, authenticated;
 grant select on public.vote_results to anon, authenticated;
 grant select on public.turnout_by_level to anon, authenticated;
 
--- Untuk Realtime Postgres Changes.
-alter publication supabase_realtime add table public.votes;
-alter publication supabase_realtime add table public.voters;
-alter publication supabase_realtime add table public.candidates;
+-- Aktifkan Realtime bila tabel belum masuk publication. Jika muncul error duplicate, abaikan atau hapus baris terkait.
+do $$
+begin
+  begin alter publication supabase_realtime add table public.votes; exception when duplicate_object then null; end;
+  begin alter publication supabase_realtime add table public.voters; exception when duplicate_object then null; end;
+  begin alter publication supabase_realtime add table public.candidates; exception when duplicate_object then null; end;
+end $$;
 
--- Data awal kandidat. Silakan edit dari halaman admin setelah deploy.
-insert into public.candidates (pair_number, chair_name, vice_name, chair_photo_url, vice_photo_url, slogan) values
-  (1, 'Nama Ketua Paslon 1', 'Nama Wakil Paslon 1', '/candidate-placeholder-1.svg', '/candidate-placeholder-2.svg', 'Bersama Berkarya untuk SMADA'),
-  (2, 'Nama Ketua Paslon 2', 'Nama Wakil Paslon 2', '/candidate-placeholder-3.svg', '/candidate-placeholder-4.svg', 'Muda, Aktif, dan Berintegritas')
-on conflict (pair_number) do update set chair_name=excluded.chair_name, vice_name=excluded.vice_name, chair_photo_url=excluded.chair_photo_url, vice_photo_url=excluded.vice_photo_url, slogan=excluded.slogan;
+insert into public.candidates (pair_number, chair_name, vice_name, pair_photo_url, chair_photo_url, vice_photo_url, vision, mission, slogan) values
+  (1, 'DZAKY KALWA YUDHA', 'SERHAN ZEKI ADHYATNA', '/paslon-1.svg', '/paslon-1.svg', null,
+   $$Menjadikan OSIS sebagai organisasi yang aktif, berintegritas, dan berwibawa serta siap merangkul dan menampung aspirasi siswa dalam mengembangkan potensi dan prestasi melalui inovasi dan teknologi dalam dunia pendidikan.$$, 
+   '["Membangun karakter siswa SMAN 2 Sangatta Utara yang beriman dan bertaqwa terhadap tuhan yang maha esa","Membangun sistem aspirasi para siswa yang terbuka dan responsif","Menanamkan nilai kejujuran, kedisiplinan, dan tanggung jawab dalam lingkungan SMAN 2 Sangatta Utara","Memanfaatkan perkembangan teknologi sebagai sarana untuk mendukung potensi dan prestasi siswa","Menjalankan setiap program kerja dengan optimal yang telah dirancang oleh pengurus OSIS"]'::jsonb,
+   'Aktif, berintegritas, dan siap merangkul aspirasi siswa'),
+  (2, 'FAJAR NATANAEL MANULLANG', 'SAFWANA AISYAH ADALIA RISQIN', '/paslon-2.svg', '/paslon-2.svg', null,
+   $$Menjadikan OSIS sebagai organisasi yang berwibawa, berintegritas, inovatif, dan lebih dekat dengan siswa dalam menjadi wadah aspirasi serta pengembangan potensi untuk mewujudkan generasi yang kreatif, berkualitas, berprestasi, dan berdaya saing tinggi di SMAN 2 Sangatta Utara.$$, 
+   '["Membetuk murid SMAN 2 Sangatta utara untuk senantiasa menjunjung tinggi keimanan dan ketakwaan kepada Tuhan Yang Maha Esa.","Membuka ruang bagi murid SMAN 2 Sangatta Utara untuk menyampaikan aspirasi.","Membangun karakter murid SMAN 2 Sangatta utara yang kreatif, berwibawa, dan berakhlak mulia.","Memanfaatkan kemajuan teknologi dan membangun kolaborasi untuk mendukung pengembangan bakat dan minat murid.","Menjalankan seluruh program kerja OSIS secara maksimal, terarah, dan bertanggung jawab sesuai dengan rancangan yang telah disusun oleh pengurus OSIS."]'::jsonb,
+   'Berwibawa, berintegritas, inovatif, dan dekat dengan siswa')
+on conflict (pair_number) do update set
+  chair_name=excluded.chair_name,
+  vice_name=excluded.vice_name,
+  pair_photo_url=excluded.pair_photo_url,
+  chair_photo_url=excluded.chair_photo_url,
+  vice_photo_url=excluded.vice_photo_url,
+  vision=excluded.vision,
+  mission=excluded.mission,
+  slogan=excluded.slogan,
+  updated_at=now();
+
 insert into public.site_settings (key, value) values
   ('running_text', '"Selamat datang di Pemilihan Ketua dan Wakil Ketua OSIS SMADA 2026. Gunakan hak suara dengan jujur, tertib, dan bertanggung jawab."'::jsonb),
-  ('theme', '{"primary":"#b91c1c","accent":"#111827"}'::jsonb)
+  ('theme', '{"primary":"#2563eb","accent":"#334155","muted":"#64748b"}'::jsonb)
 on conflict (key) do update set value=excluded.value, updated_at=now();
+
 
 -- Data pemilih dari file Excel terlampir.
 insert into public.voters (credential, role, level, class_name, full_name, gender) values
@@ -993,57 +1027,57 @@ insert into public.voters (credential, role, level, class_name, full_name, gende
   ('0097768170', 'Murid', 'Kelas 12', 'XII Tesla', 'Solagresia Zepanya Simorangkir', 'P'),
   ('0091696564', 'Murid', 'Kelas 12', 'XII Tesla', 'Wanda Oktaviani Rampa', 'P'),
   ('0096126295', 'Murid', 'Kelas 12', 'XII Tesla', 'Zuhal Zein Falahi', 'L'),
-  ('199508172023211008', 'Guru dan Tenaga Kependidikan', null, null, 'ABDUL MUCHLIS', 'L'),
-  ('198706122020122011', 'Guru dan Tenaga Kependidikan', null, null, 'Andi Asni', 'P'),
-  ('198304302006042012', 'Guru dan Tenaga Kependidikan', null, null, 'Anif Khoirul Umah', 'P'),
-  ('199307132022211007', 'Guru dan Tenaga Kependidikan', null, null, 'Aswin Bahar', 'L'),
-  ('198108292011012006', 'Guru dan Tenaga Kependidikan', null, null, 'Budi Laraswati Radityaningrum', 'P'),
-  ('197601052006042004', 'Guru dan Tenaga Kependidikan', null, null, 'Darmi', 'P'),
-  ('197102252006042004', 'Guru dan Tenaga Kependidikan', null, null, 'Endriarti', 'P'),
-  ('198504062011012010', 'Guru dan Tenaga Kependidikan', null, null, 'Fajrin', 'P'),
-  ('199904102025211018', 'Guru dan Tenaga Kependidikan', null, null, 'Fedrik Andhika Firmansyah', 'L'),
-  ('198009222010012014', 'Guru dan Tenaga Kependidikan', null, null, 'Fitri Diah Retno Hapsari', 'P'),
-  ('199410092020121010', 'Guru dan Tenaga Kependidikan', null, null, 'Harintian Abidin', 'L'),
-  ('198508172025212060', 'Guru dan Tenaga Kependidikan', null, null, 'Ike Setia Merdekawati', 'P'),
-  ('198110172011012009', 'Guru dan Tenaga Kependidikan', null, null, 'INDRIYANTI', 'P'),
-  ('198909242024211012', 'Guru dan Tenaga Kependidikan', null, null, 'Johan Elifson Nainggolan', 'L'),
-  ('199603182023212018', 'Guru dan Tenaga Kependidikan', null, null, 'LELY EKA LESTARI', 'P'),
-  ('199705272025211040', 'Guru dan Tenaga Kependidikan', null, null, 'M. A. Rizqan', 'L'),
-  ('198805222024212023', 'Guru dan Tenaga Kependidikan', null, null, 'Marsel Rannu', 'P'),
-  ('197603082006041013', 'Guru dan Tenaga Kependidikan', null, null, 'Muhammad Ali', 'L'),
-  ('198701042022211010', 'Guru dan Tenaga Kependidikan', null, null, 'Muhammad Firman Bone', 'L'),
-  ('199009162025212025', 'Guru dan Tenaga Kependidikan', null, null, 'Novi Deriska Kumalasari', 'P'),
-  ('199107252019031014', 'Guru dan Tenaga Kependidikan', null, null, 'Otto Iskandar Dinata', 'L'),
-  ('199212162022212020', 'Guru dan Tenaga Kependidikan', null, null, 'Putri Puji Lestari', 'P'),
-  ('199307142022212020', 'Guru dan Tenaga Kependidikan', null, null, 'RAHMANIAH', 'P'),
-  ('198711112015031001', 'Guru dan Tenaga Kependidikan', null, null, 'Rajja', 'L'),
-  ('198312212011012002', 'Guru dan Tenaga Kependidikan', null, null, 'Ratna Dwi Lestari', 'P'),
-  ('197805252010012008', 'Guru dan Tenaga Kependidikan', null, null, 'Rosmaida', 'P'),
-  ('198310152022212037', 'Guru dan Tenaga Kependidikan', null, null, 'Rusdariyani', 'P'),
-  ('199212102022212017', 'Guru dan Tenaga Kependidikan', null, null, 'Shela Erma Novitasari', 'P'),
-  ('199109052024212039', 'Guru dan Tenaga Kependidikan', null, null, 'Sholikatun', 'P'),
-  ('199401292022211007', 'Guru dan Tenaga Kependidikan', null, null, 'SIGIT PUTRA DARMAWAN', 'L'),
-  ('197510292000122005', 'Guru dan Tenaga Kependidikan', null, null, 'Sri Mulyantari', 'P'),
-  ('199305212022212015', 'Guru dan Tenaga Kependidikan', null, null, 'Suestri', 'P'),
-  ('199207202025212077', 'Guru dan Tenaga Kependidikan', null, null, 'WAHYU PUJI LESTARI', 'P'),
-  ('20261', 'Guru dan Tenaga Kependidikan', null, null, 'Wahyu Sahrani', 'L'),
-  ('199507032024211018', 'Guru dan Tenaga Kependidikan', null, null, 'Wilfridus Muri', 'L'),
-  ('199304182020122014', 'Guru dan Tenaga Kependidikan', null, null, 'Wita Maria', 'P'),
-  ('197910062022212017', 'Guru dan Tenaga Kependidikan', null, null, 'Yoriana Patabang', 'P'),
-  ('20262', 'Guru dan Tenaga Kependidikan', null, null, 'Akhmad Kusnaim', 'L'),
-  ('20263', 'Guru dan Tenaga Kependidikan', null, null, 'Indraswari Sekar Arumning A', 'P'),
-  ('20264', 'Guru dan Tenaga Kependidikan', null, null, 'Andi Uznul Haris', 'L'),
-  ('198407312011011003', 'Guru dan Tenaga Kependidikan', null, null, 'Hasrul', 'L'),
-  ('199909102025212008', 'Guru dan Tenaga Kependidikan', null, null, 'Idha Lissa Rima Dhani', 'P'),
-  ('199107142025212019', 'Guru dan Tenaga Kependidikan', null, null, 'LELY JUVITA SARI', 'P'),
-  ('199705142025212017', 'Guru dan Tenaga Kependidikan', null, null, 'Maydita Nurfika Sari', 'P'),
-  ('20265', 'Guru dan Tenaga Kependidikan', null, null, 'Muhamad Taufik', 'L'),
-  ('200209162025212012', 'Guru dan Tenaga Kependidikan', null, null, 'Nabila Robyatul Ulla', 'P'),
-  ('20266', 'Guru dan Tenaga Kependidikan', null, null, 'Rizki Wira Priyanggi', 'P'),
-  ('197412082014062005', 'Guru dan Tenaga Kependidikan', null, null, 'Sitti Aisyah', 'P'),
-  ('20267', 'Guru dan Tenaga Kependidikan', null, null, 'Amri', 'L'),
-  ('20268', 'Guru dan Tenaga Kependidikan', null, null, 'Aan', 'L'),
-  ('20269', 'Guru dan Tenaga Kependidikan', null, null, 'Sumiati', 'P'),
-  ('20269', 'Guru dan Tenaga Kependidikan', null, null, 'Aging', 'L'),
-  ('202610', 'Guru dan Tenaga Kependidikan', null, null, 'Bangun', 'L')
+  ('199508172023211008', 'Guru dan Tenaga Kependidikan', 'Guru dan Tenaga Kependidikan', null, 'ABDUL MUCHLIS', 'L'),
+  ('198706122020122011', 'Guru dan Tenaga Kependidikan', 'Guru dan Tenaga Kependidikan', null, 'Andi Asni', 'P'),
+  ('198304302006042012', 'Guru dan Tenaga Kependidikan', 'Guru dan Tenaga Kependidikan', null, 'Anif Khoirul Umah', 'P'),
+  ('199307132022211007', 'Guru dan Tenaga Kependidikan', 'Guru dan Tenaga Kependidikan', null, 'Aswin Bahar', 'L'),
+  ('198108292011012006', 'Guru dan Tenaga Kependidikan', 'Guru dan Tenaga Kependidikan', null, 'Budi Laraswati Radityaningrum', 'P'),
+  ('197601052006042004', 'Guru dan Tenaga Kependidikan', 'Guru dan Tenaga Kependidikan', null, 'Darmi', 'P'),
+  ('197102252006042004', 'Guru dan Tenaga Kependidikan', 'Guru dan Tenaga Kependidikan', null, 'Endriarti', 'P'),
+  ('198504062011012010', 'Guru dan Tenaga Kependidikan', 'Guru dan Tenaga Kependidikan', null, 'Fajrin', 'P'),
+  ('199904102025211018', 'Guru dan Tenaga Kependidikan', 'Guru dan Tenaga Kependidikan', null, 'Fedrik Andhika Firmansyah', 'L'),
+  ('198009222010012014', 'Guru dan Tenaga Kependidikan', 'Guru dan Tenaga Kependidikan', null, 'Fitri Diah Retno Hapsari', 'P'),
+  ('199410092020121010', 'Guru dan Tenaga Kependidikan', 'Guru dan Tenaga Kependidikan', null, 'Harintian Abidin', 'L'),
+  ('198508172025212060', 'Guru dan Tenaga Kependidikan', 'Guru dan Tenaga Kependidikan', null, 'Ike Setia Merdekawati', 'P'),
+  ('198110172011012009', 'Guru dan Tenaga Kependidikan', 'Guru dan Tenaga Kependidikan', null, 'INDRIYANTI', 'P'),
+  ('198909242024211012', 'Guru dan Tenaga Kependidikan', 'Guru dan Tenaga Kependidikan', null, 'Johan Elifson Nainggolan', 'L'),
+  ('199603182023212018', 'Guru dan Tenaga Kependidikan', 'Guru dan Tenaga Kependidikan', null, 'LELY EKA LESTARI', 'P'),
+  ('199705272025211040', 'Guru dan Tenaga Kependidikan', 'Guru dan Tenaga Kependidikan', null, 'M. A. Rizqan', 'L'),
+  ('198805222024212023', 'Guru dan Tenaga Kependidikan', 'Guru dan Tenaga Kependidikan', null, 'Marsel Rannu', 'P'),
+  ('197603082006041013', 'Guru dan Tenaga Kependidikan', 'Guru dan Tenaga Kependidikan', null, 'Muhammad Ali', 'L'),
+  ('198701042022211010', 'Guru dan Tenaga Kependidikan', 'Guru dan Tenaga Kependidikan', null, 'Muhammad Firman Bone', 'L'),
+  ('199009162025212025', 'Guru dan Tenaga Kependidikan', 'Guru dan Tenaga Kependidikan', null, 'Novi Deriska Kumalasari', 'P'),
+  ('199107252019031014', 'Guru dan Tenaga Kependidikan', 'Guru dan Tenaga Kependidikan', null, 'Otto Iskandar Dinata', 'L'),
+  ('199212162022212020', 'Guru dan Tenaga Kependidikan', 'Guru dan Tenaga Kependidikan', null, 'Putri Puji Lestari', 'P'),
+  ('199307142022212020', 'Guru dan Tenaga Kependidikan', 'Guru dan Tenaga Kependidikan', null, 'RAHMANIAH', 'P'),
+  ('198711112015031001', 'Guru dan Tenaga Kependidikan', 'Guru dan Tenaga Kependidikan', null, 'Rajja', 'L'),
+  ('198312212011012002', 'Guru dan Tenaga Kependidikan', 'Guru dan Tenaga Kependidikan', null, 'Ratna Dwi Lestari', 'P'),
+  ('197805252010012008', 'Guru dan Tenaga Kependidikan', 'Guru dan Tenaga Kependidikan', null, 'Rosmaida', 'P'),
+  ('198310152022212037', 'Guru dan Tenaga Kependidikan', 'Guru dan Tenaga Kependidikan', null, 'Rusdariyani', 'P'),
+  ('199212102022212017', 'Guru dan Tenaga Kependidikan', 'Guru dan Tenaga Kependidikan', null, 'Shela Erma Novitasari', 'P'),
+  ('199109052024212039', 'Guru dan Tenaga Kependidikan', 'Guru dan Tenaga Kependidikan', null, 'Sholikatun', 'P'),
+  ('199401292022211007', 'Guru dan Tenaga Kependidikan', 'Guru dan Tenaga Kependidikan', null, 'SIGIT PUTRA DARMAWAN', 'L'),
+  ('197510292000122005', 'Guru dan Tenaga Kependidikan', 'Guru dan Tenaga Kependidikan', null, 'Sri Mulyantari', 'P'),
+  ('199305212022212015', 'Guru dan Tenaga Kependidikan', 'Guru dan Tenaga Kependidikan', null, 'Suestri', 'P'),
+  ('199207202025212077', 'Guru dan Tenaga Kependidikan', 'Guru dan Tenaga Kependidikan', null, 'WAHYU PUJI LESTARI', 'P'),
+  ('20261', 'Guru dan Tenaga Kependidikan', 'Guru dan Tenaga Kependidikan', null, 'Wahyu Sahrani', 'L'),
+  ('199507032024211018', 'Guru dan Tenaga Kependidikan', 'Guru dan Tenaga Kependidikan', null, 'Wilfridus Muri', 'L'),
+  ('199304182020122014', 'Guru dan Tenaga Kependidikan', 'Guru dan Tenaga Kependidikan', null, 'Wita Maria', 'P'),
+  ('197910062022212017', 'Guru dan Tenaga Kependidikan', 'Guru dan Tenaga Kependidikan', null, 'Yoriana Patabang', 'P'),
+  ('20262', 'Guru dan Tenaga Kependidikan', 'Guru dan Tenaga Kependidikan', null, 'Akhmad Kusnaim', 'L'),
+  ('20263', 'Guru dan Tenaga Kependidikan', 'Guru dan Tenaga Kependidikan', null, 'Indraswari Sekar Arumning A', 'P'),
+  ('20264', 'Guru dan Tenaga Kependidikan', 'Guru dan Tenaga Kependidikan', null, 'Andi Uznul Haris', 'L'),
+  ('198407312011011003', 'Guru dan Tenaga Kependidikan', 'Guru dan Tenaga Kependidikan', null, 'Hasrul', 'L'),
+  ('199909102025212008', 'Guru dan Tenaga Kependidikan', 'Guru dan Tenaga Kependidikan', null, 'Idha Lissa Rima Dhani', 'P'),
+  ('199107142025212019', 'Guru dan Tenaga Kependidikan', 'Guru dan Tenaga Kependidikan', null, 'LELY JUVITA SARI', 'P'),
+  ('199705142025212017', 'Guru dan Tenaga Kependidikan', 'Guru dan Tenaga Kependidikan', null, 'Maydita Nurfika Sari', 'P'),
+  ('20265', 'Guru dan Tenaga Kependidikan', 'Guru dan Tenaga Kependidikan', null, 'Muhamad Taufik', 'L'),
+  ('200209162025212012', 'Guru dan Tenaga Kependidikan', 'Guru dan Tenaga Kependidikan', null, 'Nabila Robyatul Ulla', 'P'),
+  ('20266', 'Guru dan Tenaga Kependidikan', 'Guru dan Tenaga Kependidikan', null, 'Rizki Wira Priyanggi', 'P'),
+  ('197412082014062005', 'Guru dan Tenaga Kependidikan', 'Guru dan Tenaga Kependidikan', null, 'Sitti Aisyah', 'P'),
+  ('20267', 'Guru dan Tenaga Kependidikan', 'Guru dan Tenaga Kependidikan', null, 'Amri', 'L'),
+  ('20268', 'Guru dan Tenaga Kependidikan', 'Guru dan Tenaga Kependidikan', null, 'Aan', 'L'),
+  ('20269', 'Guru dan Tenaga Kependidikan', 'Guru dan Tenaga Kependidikan', null, 'Sumiati', 'P'),
+  ('20269-2', 'Guru dan Tenaga Kependidikan', 'Guru dan Tenaga Kependidikan', null, 'Aging', 'L'),
+  ('202610', 'Guru dan Tenaga Kependidikan', 'Guru dan Tenaga Kependidikan', null, 'Bangun', 'L')
 on conflict (credential) do update set role=excluded.role, level=excluded.level, class_name=excluded.class_name, full_name=excluded.full_name, gender=excluded.gender, updated_at=now();

@@ -3,8 +3,11 @@ export type Candidate = {
   pair_number: number;
   chair_name: string;
   vice_name: string;
-  chair_photo_url: string | null;
-  vice_photo_url: string | null;
+  pair_photo_url: string | null;
+  chair_photo_url?: string | null;
+  vice_photo_url?: string | null;
+  vision: string | null;
+  mission: string[] | string | null;
   slogan: string | null;
   votes?: number;
 };
@@ -18,6 +21,7 @@ export type Voter = {
   full_name: string;
   gender: string | null;
   has_voted: boolean;
+  voted_candidate_id: string | null;
   voted_at: string | null;
 };
 
