@@ -16,6 +16,12 @@ function missionList(mission: Candidate['mission']) {
   return [];
 }
 
+function displayPairPhoto(candidate: Candidate) {
+  if (candidate.pair_photo_url === '/paslon-1.svg') return '/paslon-1-front.svg';
+  if (candidate.pair_photo_url === '/paslon-2.svg') return '/paslon-2-front.svg';
+  return candidate.pair_photo_url || candidate.chair_photo_url || '/candidate-placeholder-1.svg';
+}
+
 export default function VotePage() {
   const [credential, setCredential] = useState('');
   const [voter, setVoter] = useState<Voter | null>(null);
@@ -97,7 +103,7 @@ export default function VotePage() {
                 <small>{voter.credential} • {voter.level} {voter.class_name ? `• ${voter.class_name}` : `• ${voter.role}`}</small>
               </div>
             </div>
-            <button className="btn ghost" onClick={resetIdentity} type="button">Ini bukan identitas saya</button>
+            <button className="btn identity-reset-btn" onClick={resetIdentity} type="button">Ini bukan identitas saya</button>
 
             {!voter.has_voted && (
               <>
@@ -109,7 +115,7 @@ export default function VotePage() {
                       <label className={`card vote-option ${candidateId === candidate.id ? 'selected' : ''}`} key={candidate.id}>
                         <input type="radio" name="candidate" value={candidate.id} onChange={() => setCandidateId(candidate.id)} />
                         <div className="vote-option-photo">
-                          <img src={candidate.pair_photo_url || candidate.chair_photo_url || '/candidate-placeholder-1.svg'} alt={`Foto Paslon ${candidate.pair_number}`} />
+                          <img src={displayPairPhoto(candidate)} alt={`Foto Paslon ${candidate.pair_number}`} />
                         </div>
                         <div>
                           <span className="pair-ribbon inline">PASLON {candidate.pair_number}</span>

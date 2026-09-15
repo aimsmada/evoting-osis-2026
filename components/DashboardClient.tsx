@@ -20,6 +20,12 @@ function missionList(mission: Candidate['mission']) {
   return [];
 }
 
+function displayPairPhoto(candidate: Candidate) {
+  if (candidate.pair_photo_url === '/paslon-1.svg') return '/paslon-1-front.svg';
+  if (candidate.pair_photo_url === '/paslon-2.svg') return '/paslon-2-front.svg';
+  return candidate.pair_photo_url || candidate.chair_photo_url || '/candidate-placeholder-1.svg';
+}
+
 export default function DashboardClient() {
   const [data, setData] = useState<PublicData>({ candidates: [], turnout: [], settings: {}, now: '' });
   const [loading, setLoading] = useState(true);
@@ -69,8 +75,7 @@ export default function DashboardClient() {
             return (
               <article className="card public-candidate-card" key={candidate.id}>
                 <div className="candidate-photo-wide">
-                  <img src={candidate.pair_photo_url || candidate.chair_photo_url || '/candidate-placeholder-1.svg'} alt={`Foto Paslon ${candidate.pair_number}`} />
-                  <span className="pair-ribbon">PASLON {candidate.pair_number}</span>
+                  <img src={displayPairPhoto(candidate)} alt={`Foto Paslon ${candidate.pair_number}`} />
                 </div>
                 <div className="candidate-content">
                   <div className="name-grid">
@@ -90,9 +95,8 @@ export default function DashboardClient() {
         </section>
 
         <section className="turnout-section">
-          <div className="section-heading">
-            <span>Statistik Partisipasi Pemilih</span>
-            <strong>Kelas 10, Kelas 11, Kelas 12, dan GTK</strong>
+          <div className="section-heading center-heading">
+            <strong>Statistik Partisipasi Pemilih</strong>
           </div>
           <div className="grid turnout">
             {levelOrder.map((level) => {

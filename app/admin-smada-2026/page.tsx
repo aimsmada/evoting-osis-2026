@@ -220,6 +220,7 @@ export default function AdminPage() {
           <div className="grid result-grid">
             {resultRows.map((row) => (
               <div className="result-card" key={row.id}>
+                <div className="admin-pair-photo"><img src={row.pair_photo_url || row.chair_photo_url || '/candidate-placeholder-1.svg'} alt={`Foto Paslon ${row.pair_number}`} /></div>
                 <span>Paslon {row.pair_number}</span>
                 <b>{row.percentage}%</b>
                 <small>{row.voteCount} suara dari {totalValidVotes} suara valid</small>
@@ -326,6 +327,7 @@ function CandidateEditor({ candidate, onSave }: { candidate: Candidate; onSave: 
   return (
     <div className="card candidate-editor">
       <h2>Paslon {c.pair_number}</h2>
+      <div className="admin-pair-photo editor-preview"><img src={c.pair_photo_url || c.chair_photo_url || '/candidate-placeholder-1.svg'} alt={`Preview Paslon ${c.pair_number}`} /></div>
       <label>URL Foto Paslon</label>
       <input value={c.pair_photo_url || c.chair_photo_url || ''} onChange={(e) => setC({ ...c, pair_photo_url: e.target.value, chair_photo_url: e.target.value })} />
       <label>Nama Calon Ketua</label>
@@ -336,8 +338,6 @@ function CandidateEditor({ candidate, onSave }: { candidate: Candidate; onSave: 
       <textarea rows={4} value={c.vision || ''} onChange={(e) => setC({ ...c, vision: e.target.value })} />
       <label>Misi — satu nomor per baris</label>
       <textarea rows={7} value={missionToLines(c.mission)} onChange={(e) => setC({ ...c, mission: e.target.value })} />
-      <label>Slogan Singkat</label>
-      <textarea rows={2} value={c.slogan || ''} onChange={(e) => setC({ ...c, slogan: e.target.value })} />
       <button className="btn" onClick={() => onSave(c)} style={{ marginTop: 12 }}>Simpan Kandidat</button>
     </div>
   );

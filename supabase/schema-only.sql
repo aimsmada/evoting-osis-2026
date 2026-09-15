@@ -183,11 +183,11 @@ insert into public.candidates (pair_number, chair_name, vice_name, pair_photo_ur
   (1, 'DZAKY KALWA YUDHA', 'SERHAN ZEKI ADHYATNA', '/paslon-1.svg', '/paslon-1.svg', null,
    $$Menjadikan OSIS sebagai organisasi yang aktif, berintegritas, dan berwibawa serta siap merangkul dan menampung aspirasi siswa dalam mengembangkan potensi dan prestasi melalui inovasi dan teknologi dalam dunia pendidikan.$$, 
    '["Membangun karakter siswa SMAN 2 Sangatta Utara yang beriman dan bertaqwa terhadap tuhan yang maha esa","Membangun sistem aspirasi para siswa yang terbuka dan responsif","Menanamkan nilai kejujuran, kedisiplinan, dan tanggung jawab dalam lingkungan SMAN 2 Sangatta Utara","Memanfaatkan perkembangan teknologi sebagai sarana untuk mendukung potensi dan prestasi siswa","Menjalankan setiap program kerja dengan optimal yang telah dirancang oleh pengurus OSIS"]'::jsonb,
-   'Aktif, berintegritas, dan siap merangkul aspirasi siswa'),
+   ''),
   (2, 'FAJAR NATANAEL MANULLANG', 'SAFWANA AISYAH ADALIA RISQIN', '/paslon-2.svg', '/paslon-2.svg', null,
    $$Menjadikan OSIS sebagai organisasi yang berwibawa, berintegritas, inovatif, dan lebih dekat dengan siswa dalam menjadi wadah aspirasi serta pengembangan potensi untuk mewujudkan generasi yang kreatif, berkualitas, berprestasi, dan berdaya saing tinggi di SMAN 2 Sangatta Utara.$$, 
    '["Membetuk murid SMAN 2 Sangatta utara untuk senantiasa menjunjung tinggi keimanan dan ketakwaan kepada Tuhan Yang Maha Esa.","Membuka ruang bagi murid SMAN 2 Sangatta Utara untuk menyampaikan aspirasi.","Membangun karakter murid SMAN 2 Sangatta utara yang kreatif, berwibawa, dan berakhlak mulia.","Memanfaatkan kemajuan teknologi dan membangun kolaborasi untuk mendukung pengembangan bakat dan minat murid.","Menjalankan seluruh program kerja OSIS secara maksimal, terarah, dan bertanggung jawab sesuai dengan rancangan yang telah disusun oleh pengurus OSIS."]'::jsonb,
-   'Berwibawa, berintegritas, inovatif, dan dekat dengan siswa')
+   '')
 on conflict (pair_number) do update set
   chair_name=excluded.chair_name,
   vice_name=excluded.vice_name,
