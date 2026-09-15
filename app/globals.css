@@ -1,0 +1,91 @@
+@import url('https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;700;900&family=Inter:wght@400;500;700;900&display=swap');
+
+:root {
+  --red: #b91c1c;
+  --red-2: #ef4444;
+  --black: #0a0a0a;
+  --white: #ffffff;
+  --gray: #f3f4f6;
+  --gray-2: #e5e7eb;
+  --dark-gray: #374151;
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body {
+  margin: 0;
+  font-family: 'Google Sans', 'Inter', Arial, sans-serif;
+  background: radial-gradient(circle at top left, rgba(185,28,28,.18), transparent 34%), #f7f7f8;
+  color: var(--black);
+}
+a { color: inherit; text-decoration: none; }
+button, input, select, textarea { font-family: inherit; }
+.header {
+  width: min(1180px, calc(100% - 32px));
+  margin: 22px auto 12px;
+  padding: 24px 22px;
+  border-radius: 26px;
+  background: rgba(255,255,255,.86);
+  border: 1px solid rgba(0,0,0,.06);
+  box-shadow: 0 24px 70px rgba(0,0,0,.08);
+  backdrop-filter: blur(14px);
+  text-align: center;
+}
+.header h1 { margin: 0; font-size: clamp(22px, 4vw, 44px); letter-spacing: -.04em; font-weight: 900; }
+.container { width: min(1180px, calc(100% - 32px)); margin: 0 auto; }
+.grid { display: grid; gap: 18px; }
+.dashboard-grid { grid-template-columns: 1.2fr .8fr; align-items: stretch; }
+.card {
+  background: rgba(255,255,255,.9);
+  border: 1px solid rgba(17,24,39,.07);
+  border-radius: 28px;
+  box-shadow: 0 20px 70px rgba(17,24,39,.08);
+  padding: 22px;
+  overflow: hidden;
+}
+.title-row { display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; }
+.badge { display:inline-flex; align-items:center; gap:8px; padding:8px 12px; border-radius:999px; background:#111827; color:#fff; font-weight:700; font-size:13px; }
+.turnout { grid-template-columns: repeat(4, 1fr); margin: 18px 0; }
+.turnout-card { padding:18px; border-radius:22px; background:#fff; border:1px solid #e5e7eb; box-shadow:0 14px 28px rgba(0,0,0,.04); }
+.turnout-card b { display:block; font-size:26px; color:var(--red); margin-top:5px; }
+.progress { margin-top:12px; height:10px; background:#f1f1f1; border-radius:999px; overflow:hidden; }
+.progress span { display:block; height:100%; background:linear-gradient(90deg,var(--red),var(--black)); border-radius:999px; transition: width .8s ease; }
+.pie-wrap { display:flex; align-items:center; justify-content:center; min-height:330px; position:relative; }
+.pie { width:min(330px,75vw); aspect-ratio:1/1; border-radius:50%; background:conic-gradient(var(--red) 0deg, var(--red) var(--deg, 180deg), var(--black) var(--deg, 180deg) 360deg); box-shadow: inset 0 0 0 28px #fff, 0 24px 70px rgba(185,28,28,.22); animation: pop .8s ease both; }
+.pie-center { position:absolute; width:160px; height:160px; border-radius:999px; display:grid; place-items:center; background:#fff; text-align:center; box-shadow:0 15px 50px rgba(0,0,0,.12); }
+.pie-center strong { font-size:34px; color:var(--red); }
+.candidates { grid-template-columns: repeat(2, 1fr); }
+.candidate { position:relative; isolation:isolate; min-height:330px; }
+.candidate:before { content:""; position:absolute; inset:-30px auto auto -30px; width:190px; height:190px; background:rgba(185,28,28,.12); border-radius:999px; z-index:-1; }
+.photo-row { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:14px; }
+.photo { height:180px; border-radius:22px; background:#eee; overflow:hidden; border: 4px solid #fff; box-shadow:0 18px 45px rgba(0,0,0,.1); }
+.photo img { width:100%; height:100%; object-fit:cover; display:block; }
+.pair-no { display:inline-grid; place-items:center; width:44px; height:44px; border-radius:16px; background:var(--red); color:#fff; font-weight:900; }
+.percent { font-size:48px; line-height:1; font-weight:900; letter-spacing:-.06em; }
+.vote-btn { display:block; width:min(420px,100%); margin:24px auto; text-align:center; border:0; color:#fff; font-weight:900; padding:19px 26px; border-radius:999px; background:linear-gradient(135deg,var(--red),#111); box-shadow: 0 20px 45px rgba(185,28,28,.28); transition:.25s; }
+.vote-btn:hover { transform:translateY(-3px) scale(1.01); }
+.footer { text-align:center; padding:26px 18px 72px; color:#374151; }
+.footer strong { font-weight:900; color:#000; }
+.social { display:inline-flex; align-items:center; gap:8px; margin-top:12px; color:var(--red); font-weight:800; }
+.running { position:fixed; left:0; right:0; bottom:0; padding:12px 0; background:#111; color:#fff; overflow:hidden; z-index:20; }
+.running span { display:inline-block; white-space:nowrap; padding-left:100%; animation: ticker 28s linear infinite; font-weight:800; }
+.form-page { min-height:100vh; display:grid; place-items:center; padding:24px; }
+.form-card { width:min(720px,100%); }
+input, textarea, select { width:100%; padding:13px 14px; border-radius:14px; border:1px solid #d1d5db; background:#fff; outline:none; }
+input:focus, textarea:focus, select:focus { border-color:var(--red); box-shadow:0 0 0 4px rgba(185,28,28,.12); }
+label { display:block; font-weight:800; margin:14px 0 7px; }
+.btn { border:0; padding:13px 16px; border-radius:14px; background:var(--red); color:#fff; font-weight:800; cursor:pointer; }
+.btn.secondary { background:#111827; }
+.btn.ghost { color:#111; background:#f3f4f6; }
+.notice { padding:12px 14px; background:#fef2f2; border:1px solid #fecaca; border-radius:16px; color:#7f1d1d; font-weight:700; margin-top:12px; }
+.success { background:#ecfdf5; border-color:#bbf7d0; color:#065f46; }
+.admin-layout { display:grid; grid-template-columns:280px 1fr; min-height:100vh; }
+.sidebar { background:#111; color:#fff; padding:24px; position:sticky; top:0; height:100vh; }
+.admin-main { padding:24px; }
+.table-wrap { overflow:auto; border-radius:18px; border:1px solid #e5e7eb; }
+table { width:100%; border-collapse:collapse; background:#fff; font-size:14px; }
+th, td { padding:12px; border-bottom:1px solid #f0f0f0; text-align:left; }
+th { background:#f9fafb; font-weight:900; white-space:nowrap; }
+.actions { display:flex; gap:8px; flex-wrap:wrap; }
+@keyframes ticker { to { transform: translateX(-100%); } }
+@keyframes pop { from { transform:scale(.92); opacity:.4; } to { transform:scale(1); opacity:1; } }
+@media (max-width: 900px) { .dashboard-grid, .candidates, .turnout, .admin-layout { grid-template-columns: 1fr; } .sidebar { position:relative; height:auto; } .photo { height:150px; } }
