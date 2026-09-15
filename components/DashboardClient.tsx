@@ -38,13 +38,6 @@ export default function DashboardClient() {
     <div style={cssVars}>
       <header className="header"><h1>PEMILIHAN KETUA DAN WAKIL KETUA OSIS SMADA 2026</h1></header>
       <main className="container">
-        <section className="grid turnout">
-          {levelOrder.map((level) => {
-            const row = turnoutMap[level] || { level, total: 0, voted: 0, percentage: 0 };
-            return <div className="turnout-card" key={level}><span>{level}</span><b>{Number(row.percentage || 0)}%</b><small>{row.voted} dari {row.total} sudah memilih</small><div className="progress"><span style={{ width: `${row.percentage || 0}%` }} /></div></div>;
-          })}
-        </section>
-
         <section className="grid dashboard-grid">
           <div className="card">
             <div className="title-row"><h2>Hasil Polling Real Time</h2><span className="badge"><RefreshCw size={16}/> Update tiap 1 menit</span></div>
@@ -63,6 +56,20 @@ export default function DashboardClient() {
             })}
           </div>
         </section>
+
+        <section className="turnout-section">
+          <div className="section-heading">
+            <span>Statistik Partisipasi Pemilih</span>
+            <strong>Per tingkat kelas dan GTK</strong>
+          </div>
+          <div className="grid turnout">
+            {levelOrder.map((level) => {
+              const row = turnoutMap[level] || { level, total: 0, voted: 0, percentage: 0 };
+              return <div className="turnout-card" key={level}><span>{level}</span><b>{Number(row.percentage || 0)}%</b><small>{row.voted} dari {row.total} sudah memilih</small><div className="progress"><span style={{ width: `${row.percentage || 0}%` }} /></div></div>;
+            })}
+          </div>
+        </section>
+
         <a className="vote-btn" href="/vote"><Vote size={18} style={{verticalAlign:'middle', marginRight:8}}/> KE BILIK SUARA</a>
       </main>
       <footer className="footer"><b>OSIS SMA Negeri 2 Sangatta Utara</b><br/>A Place to Learn, Lead, and <strong>SHINE</strong><br/><a className="social" href="https://www.instagram.com/smadaosis/" target="_blank" rel="noreferrer"><Instagram size={18}/> @smadaosis</a></footer>
